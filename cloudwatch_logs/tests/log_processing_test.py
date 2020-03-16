@@ -15,6 +15,7 @@
 #
 # author: Steven Czerwinski <czerwin@scalyr.com>
 import hashlib
+import cloudwatch_streamer.main as streamer
 from tests.test_base import ScalyrTestCase
 from cloudwatch_streamer.main import LogLineRedacter, LogLineSampler
 
@@ -322,6 +323,50 @@ class TestLogLineSampler(ScalyrTestCase):
 
         self.assertTrue(sampler.process_line('INFO Another\n') is None)
         self.assertEquals(sampler.process_line('INFO Here is a line\n'), 0.2)
+
+
+class TestStreamer(ScalyrTestCase):
+    def setUp(self):
+        super(TestStreamer, self).setUp()
+        self.message = {
+            "logGroup": "logGroup",
+            "logEvents": [{"message": "abc"}],
+        }
+
+    def test_build_post_data_without_timestamp(self):
+        streamer.LOG_GROUP_OPTIONS = {}
+
+        self.assertEquals(streamer.build_post_data(self.message), "abc\n")
+
+    def test_build_post_data_with_timestamp(self):
+        streamer.LOG_GROUP_OPTIONS = {"logGroup": {"prefix_timestamp": True}}
+        self.message["logEvents"][0]["timestamp"] = "12345"
+
+        self.assertEquals(streamer.build_post_data(self.message), "12345 abc\n")
+
+    def test_build_post_data_with_timestamp_no_option(self):
+        streamer.LOG_GROUP_OPTIONS = {"logGroup": {}}
+        self.message["logEvents"][0]["timestamp"] = "12345"
+
+        self.assertEquals(streamer.build_post_data(self.message), "abc\n")
+
+    def test_build_post_data_with_timestamp_option_false(self):
+        streamer.LOG_GROUP_OPTIONS = {"logGroup": {"prefix_timestamp": False}}
+        self.message["logEvents"][0]["timestamp"] = "12345"
+
+        self.assertEquals(streamer.build_post_data(self.message), "abc\n")
+
+    def test_build_post_data_with_no_timestamp_option_true(self):
+        streamer.LOG_GROUP_OPTIONS = {"logGroup": {"prefix_timestamp": True}}
+
+        self.assertEquals(streamer.build_post_data(self.message), "abc\n")
+
+    def test_build_post_data_with_timestamp_multiline(self):
+        streamer.LOG_GROUP_OPTIONS = {"logGroup": {"prefix_timestamp": True}}
+        self.message["logEvents"][0]["timestamp"] = "12345"
+        self.message["logEvents"].append({"timestamp": "22222", "message": "cba"})
+
+        self.assertEquals(streamer.build_post_data(self.message), "12345 abc\n22222 cba\n")
 
 
 if __name__ == '__main__':

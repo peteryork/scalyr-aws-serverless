@@ -542,10 +542,14 @@ def build_post_data(message):
         if not sampler.process_line(logEvent['message']):
             continue
         (log_line, redacted) = redactor.process_line(logEvent['message'])
-        if log_line.endswith('\n'):
-            post_data += log_line
+        if not 'timestamp' in logEvent or not 'prefix_timestamp' in options or not options['prefix_timestamp']:
+            ts = ""
         else:
-            post_data += log_line + '\n'
+            ts = str(logEvent['timestamp']) + " "
+        if log_line.endswith('\n'):
+            post_data += ts + log_line
+        else:
+            post_data += ts + log_line + '\n'
     LOGGER.debug(f"Post data: {post_data}")
     return post_data
 
