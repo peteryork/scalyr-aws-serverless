@@ -167,6 +167,7 @@ filterName | cloudWatchLogs | The name of the AWS Subscription Filter
 filterPattern | "" | See the [AWS Documentation](https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/FilterAndPatternSyntax.html)
 sampling_rules | {} | See the [Scalyr Agent Documentation](https://app.scalyr.com/help/scalyr-agent#filter)
 redaction_rules | {} | See the [Scalyr Agent Documentation](https://app.scalyr.com/help/scalyr-agent#redaction)
+prefix_timestamp | false | Append the system timestamp to the beginning of the line
 
 ### Automatically subscribing CloudWatch logGroups
 
