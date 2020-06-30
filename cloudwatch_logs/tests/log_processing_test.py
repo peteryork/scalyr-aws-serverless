@@ -368,6 +368,12 @@ class TestStreamer(ScalyrTestCase):
 
         self.assertEquals(streamer.build_post_data(self.message), "12345 abc\n22222 cba\n")
 
+    def test_build_params_with_server_attributes(self):
+        streamer.LOG_GROUP_OPTIONS = {"logGroup": {"attributes": {"tier": "dev"}}}
+        self.message["owner"] = "123456789"
+        self.message["logStream"] = "cw/logstream"
+
+        self.assertEquals(streamer.build_params(self.message)["server-tier"], "dev")
 
 if __name__ == '__main__':
     unittest.main()

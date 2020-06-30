@@ -514,6 +514,12 @@ def build_params(message):
         'server-environmentId': ENVIRONMENT_ID,
         'parser': options.get('parser', 'cloudWatchLogs')
     }
+
+    # add server attributes
+    if 'attributes' in options:
+        for key in options['attributes']:
+            params['server-'+key] = options['attributes'][key]
+
     LOGGER.debug(f"Built url params: {json.dumps(params)}")
     params['token'] = WRITE_LOGS_KEY
     return params
