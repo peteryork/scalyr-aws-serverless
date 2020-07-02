@@ -103,6 +103,20 @@ Scalyr log delivery options are customised by providing a JSON object as a strin
   }
 ```
 
+Additionally to the options described in the [Scalyr Upload Logs API](https://www.scalyr.com/help/api-uploadLogs), you
+ can configure a log group with an `attributes` field to include constant server fields to your messages.
+
+```
+  {
+    "log/dev/.*": {
+      "attributes": {
+        "tier": "dev",
+        "department": "mydept"
+      }
+    }
+  }
+```
+
 #### Using regex to customise log delivery options
 
 The above `LogGroupOptions` can be simplified to the below, using valid regex.
