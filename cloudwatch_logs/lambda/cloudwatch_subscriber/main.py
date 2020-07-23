@@ -244,10 +244,9 @@ def lambda_add_permission(destination_arn, account_id, region):
 
 def lambda_remove_permission(destination_arn):
     """Removes the lambda:InvokeFunction permission statement from the Streamer Lambda
-    fuction, the logGroup will no longer be allowed to deliver logEvents
+    function, so any of the log groups can invoke it.
 
-    @param log_group_name: The name of the logGroup in AWS
-    @param destination_arn: The ARN of the Lambda function to subcribe the logGroup to
+    @param destination_arn: The ARN of the Lambda function to subscribe the logGroup to
 
     @type destination_arn: str
     """
@@ -391,8 +390,6 @@ def process_create_log_group_event(event):
             raise
         else:
             LOGGER.info(f"Loaded LogGroupOptions: " + json.dumps(log_group_options))
-
-        lambda_add_permission(os.environ['DESTINATION_ARN'], os.environ['AWS_ACCOUNT_ID'],os.environ['AWS_REGION'])
 
         matched_group_options = match_log_groups([log_group_name], log_group_options)
         for log_group_name, options in matched_group_options.items():

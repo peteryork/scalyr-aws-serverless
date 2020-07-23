@@ -35,7 +35,7 @@ enabled (have at least one trail) for any future log groups to be auto-subscribe
 
 ### Using CloudFormation
 
-1. Click -> [![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?#stacks/create/review?stackName=ScalyrCloudWatchLogsImporter&templateURL=https://scalyr-aws-serverless.s3.amazonaws.com/cloudwatch_logs/cloudwatch-logs-1.0.8.yml)
+1. Click -> [![Launch Stack](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?#stacks/create/review?stackName=ScalyrCloudWatchLogsImporter&templateURL=https://scalyr-aws-serverless.s3.amazonaws.com/cloudwatch_logs/cloudwatch-logs-1.0.9.yml)
 2. Change the region on the top right of the console if required:
 
    ![Region](readme-images/region.png)
