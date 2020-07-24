@@ -21,5 +21,7 @@ Features:
 * Added `prefix_timestamp` log group option which will prefix all log lines with the event timestamp.
 
 ## 1.0.6 - January 28, 2020
+
 Features:
+
 * Added `sampling_rules` and `redaction_rules` to the available log group options. Allows sampling and redacting log lines before being sent to Scalyr.
