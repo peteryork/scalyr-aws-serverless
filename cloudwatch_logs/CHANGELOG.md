@@ -2,8 +2,8 @@
 
 Bug fixes:
 * Fixed issue causing "RequestEntityTooLarge" exceptions when updating the Lambda policy in accounts 
-with a large number of log groups. Previously, the each log group was given permission to invoke the Lambda. 
-Now, all log groups within the AWS account are allowed to invoke the Lambda.. 
+with a large number of log groups. Previously, each log group was given permission to invoke the Lambda. 
+Now, all log groups within the AWS account are allowed to invoke the Lambda.
  
 Misc:
 * Added documentation for the manual test deployment.
