@@ -44,6 +44,8 @@ LAMBDA_TIMEOUT = 15
 # invokations as we need to reference it in subsequent calls to the AWS API
 UUID_SEED = UUID('e4ce7ea4-1343-427a-9e51-a22aad3dd0a8')
 
+STREAMER_FUNCTION_PERMISSION_NAME = "streamer_function_permission"
+
 
 def build_resp_headers(json_resp_body):
     """Returns the headers to be used for the CloudFormation response"""
@@ -208,16 +210,14 @@ def diff_log_groups(log_group_options, old_log_group_options):
     return added, set(updated), deleted
 
 
-def lambda_add_permission(log_group_name, destination_arn, account_id, region):
-    """Adds a lambda:InvokeFunction permission statement to the Streamer Lambda fuction
-    which allows the CloudWatch logGroup to deliver logEvents
+def lambda_add_permission(destination_arn, account_id, region):
+    """Adds a lambda:InvokeFunction permission statement to the Streamer Lambda function
+    which allows every CloudWatch logGroup to deliver logEvents
 
-    @param log_group_name: The name of the logGroup in AWS
-    @param destination_arn: The ARN of the Lambda function to subcribe the logGroup to
+    @param destination_arn: The ARN of the Lambda function to subscribe the logGroup to
     @param account_id: The Account Id of the AWS account, from the CloudFormation Event
     @param region: The AWS region, from the CloudFormation Event
 
-    @type log_group_name: str
     @type destination_arn: str
     @type account_id: str
     @type region: str
@@ -226,45 +226,43 @@ def lambda_add_permission(log_group_name, destination_arn, account_id, region):
         LAMBDA.add_permission(
             FunctionName=destination_arn,
             # Uses the seed to generate a reproducible alphanumeric string
-            StatementId=uuid5(UUID_SEED, log_group_name).hex,
+            StatementId=uuid5(UUID_SEED, STREAMER_FUNCTION_PERMISSION_NAME).hex,
             Action='lambda:InvokeFunction',
             Principal=f"logs.{region}.amazonaws.com",
-            SourceArn=f"arn:aws:logs:{region}:{account_id}:log-group:{log_group_name}:*",
+            SourceArn=f"arn:aws:logs:{region}:{account_id}:*",
             SourceAccount=account_id
         )
     except LAMBDA.exceptions.ResourceConflictException as e:
         # The statement id provided already exists, we must have added the permission in a previous run
         LOGGER.info(f"Warning, lambda permission already exists. No action taken: {e}")
     except:
-        LOGGER.exception(f"Error adding lambda permission: {log_group_name}")
+        LOGGER.exception(f"Error adding lambda permission: {STREAMER_FUNCTION_PERMISSION_NAME}")
         raise
     else:
-        LOGGER.info(f"Added lambda permission: {log_group_name}")
+        LOGGER.info(f"Added lambda permission: {STREAMER_FUNCTION_PERMISSION_NAME}")
 
 
-def lambda_remove_permission(log_group_name, destination_arn):
+def lambda_remove_permission(destination_arn):
     """Removes the lambda:InvokeFunction permission statement from the Streamer Lambda
-    fuction, the logGroup will no longer be allowed to deliver logEvents
+    function, so any of the log groups can invoke it.
 
-    @param log_group_name: The name of the logGroup in AWS
-    @param destination_arn: The ARN of the Lambda function to subcribe the logGroup to
+    @param destination_arn: The ARN of the Lambda function to subscribe the logGroup to
 
-    @type log_group_name: str
     @type destination_arn: str
     """
     try:
         LAMBDA.remove_permission(
             FunctionName=destination_arn,
             # Uses the seed to generate a reproducible alphanumeric string
-            StatementId=uuid5(UUID_SEED, log_group_name).hex
+            StatementId=uuid5(UUID_SEED, STREAMER_FUNCTION_PERMISSION_NAME).hex
         )
     except LAMBDA.exceptions.ResourceNotFoundException as e:
         LOGGER.info(f"Warning, lambda permission doesn't exist. No action taken: {e}")
     except:
-        LOGGER.exception(f"Error removing lambda permission: {log_group_name}")
+        LOGGER.exception(f"Error removing lambda permission: {STREAMER_FUNCTION_PERMISSION_NAME}")
         raise
     else:
-        LOGGER.info(f"Removed lambda permission: {log_group_name}")
+        LOGGER.info(f"Removed lambda permission: {STREAMER_FUNCTION_PERMISSION_NAME}")
 
 
 def put_subscription_filter(log_group_name, options, destination_arn):
@@ -335,6 +333,7 @@ def process_cf_event(event):
 
     auto_subscribe_log_groups = event['ResourceProperties']['AutoSubscribeLogGroups']
     if auto_subscribe_log_groups == 'true':
+
         destination_arn = event['ResourceProperties']['DestinationArn']
         account_id = event['ResourceProperties']['AccountId']
         region = event['ResourceProperties']['Region']
@@ -344,10 +343,13 @@ def process_cf_event(event):
         matched_log_group_options = match_log_groups(aws_log_groups, log_group_options)
 
         if event['RequestType'] == 'Create':
+            lambda_add_permission(destination_arn, account_id, region)
+
             for log_group_name, options in matched_log_group_options.items():
-                lambda_add_permission(log_group_name, destination_arn, account_id, region)
                 put_subscription_filter(log_group_name, options, destination_arn)
         elif event['RequestType'] == 'Update':
+            lambda_add_permission(destination_arn, account_id, region)
+
             old_log_group_options = load_log_group_options(event, 'OldResourceProperties')
             old_matched_log_group_options = match_log_groups(aws_log_groups, old_log_group_options)
             added, updated, deleted = diff_log_groups(matched_log_group_options, old_matched_log_group_options)
@@ -355,24 +357,21 @@ def process_cf_event(event):
                 # We don't know the current state of the subscription filters as we weren't in charge
                 for log_group_name, options in matched_log_group_options.items():
                     # So create/update subscription filters for all the logGroups that matched
-                    lambda_add_permission(log_group_name, destination_arn, account_id, region)
                     put_subscription_filter(log_group_name, options, destination_arn)
             else:
                 # We were in charge previously
                 for log_group_name, options in matched_log_group_options.items():
                     # So only create/update subscription filters for added or updated logGroups
                     if log_group_name in added or log_group_name in updated:
-                        lambda_add_permission(log_group_name, destination_arn, account_id, region)
                         put_subscription_filter(log_group_name, options, destination_arn)
             for log_group_name, options in old_matched_log_group_options.items():
                 # Attempt to delete subcription filters for logGroups that are no longer defined
                 if log_group_name in deleted:
                     delete_subscription_filter(log_group_name, options)
-                    lambda_remove_permission(log_group_name, destination_arn)
         elif event['RequestType'] == 'Delete':
+            lambda_remove_permission(destination_arn)
             for log_group_name, options in matched_log_group_options.items():
                 delete_subscription_filter(log_group_name, options)
-                lambda_remove_permission(log_group_name, destination_arn)
 
 def process_create_log_group_event(event):
     """Processes a CloudWatch CreateLogGroup event
@@ -394,7 +393,6 @@ def process_create_log_group_event(event):
 
         matched_group_options = match_log_groups([log_group_name], log_group_options)
         for log_group_name, options in matched_group_options.items():
-            lambda_add_permission(log_group_name, os.environ['DESTINATION_ARN'], os.environ['AWS_ACCOUNT_ID'], os.environ['AWS_REGION'])
             put_subscription_filter(log_group_name, options, os.environ['DESTINATION_ARN'])
 
 
