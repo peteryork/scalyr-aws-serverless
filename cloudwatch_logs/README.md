@@ -103,8 +103,7 @@ Scalyr log delivery options are customised by providing a JSON object as a strin
   }
 ```
 
-Additionally to the options described in the [Scalyr Upload Logs API](https://www.scalyr.com/help/api-uploadLogs), you
- can configure a log group with an `attributes` field to include constant server fields to your messages.
+Options described in the [Scalyr Upload Logs API](https://www.scalyr.com/help/api-uploadLogs) allow you to define server and log attributes, which are then added to your data as server-level fields. Additionally you can define server-level fields via the `attributes` property. The example below creates "tier" and "department" fields:
 
 ```
   {
